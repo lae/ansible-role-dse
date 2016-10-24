@@ -1,0 +1,65 @@
+language: python
+python: '2.7'
+sudo: required
+dist: trusty
+addons:
+  apt:
+    sources:
+    - sourceline: ppa:ubuntu-lxc/stable
+    packages:
+    - python-pip
+    - lxc
+    - lxc-templates
+    - yum
+    - expect-dev
+cache:
+  directories:
+  - "$HOME/lxc/"
+  pip: true
+before_cache:
+- mkdir $HOME/lxc
+- sudo tar cf $HOME/lxc/cache.tar /var/cache/lxc/
+- sudo chown $USER. $HOME/lxc/cache.tar
+env:
+  matrix:
+  - LXC_NAME=test-debian8 LXC_DISTRO=debian LXC_RELEASE=jessie
+  - LXC_NAME=test-debian7 LXC_DISTRO=debian LXC_RELEASE=wheezy
+  global:
+    secure: 0NU63++MOwxExYKOLoAmSYZ+5rhtrtJFxAhHhgG0XD8ldUH4Dr5hl+D9SicCIfJKav+Uvv+nIdtDN0aK9RJ3P6CZyup9unnwpU5wZYQxrOAw77tXQn1FnuwY08MbNX5xJKAiZqNNevRpml7QcX20ny6SWhm+piqBeXMWRCvLhekDhdtvioceH7qZ3ZrDFiwDFuGQamC3Nk5Y99OsFouyZJJnXWEVAxxKJ25JNFA16o2UmZb6N0Bh3D2HJixsP4hTZQkZkVyvMOxXbuvXiOLyywgLX5ysSMJCsIj+t6OMXFrDG3/mx0rgeStLaV4RrojLF0NZsLw5+zKS2f4YdmwL2NrwWx4STN3M81iUpYZgWINVkFw/QQQN1+wiFEzcd7GI1aXo9MDWkStZJJj5uWOa5L9+nugjOen7WZkK1QWRrgis7vBXKrE0DPwdC5Q73n+rN+CX2V9XQ7o4yxwMtminINzOwgL8u2IcbEPL3E2v/PZLsNFuIV3psNlFmHvWmT37cn2NShcJZQ60H4qEh1YLL8k91NW0AassWZ6JAYDktYduUtrH0o2cNPIkdZ53JHsurTRWeq98BX2MjhvUEeoMC/ERgYOvRCUrybEsdvLjYfM/VedD8f7BE/W3aXoLi4fus1Nyy2HtRQKjcb7vNSMU/dHruW9CweB79Ua0SVGgXHU=
+install:
+- pip install ansible
+- ansible --version
+- ansible-galaxy install williamyeh.oracle-java
+- ansible-galaxy install lae.dse_repo
+- printf "$VAULT_PASS" > .vault_password
+- printf '[defaults]\nroles_path=../\nhost_key_checking=False\nvault_password_file=.vault_password\ncallback_whitelist=profile_tasks'
+  >ansible.cfg
+- sudo tar xf $HOME/lxc/cache.tar -C / || echo "Didn't extract cache."
+- export LXC_ROOTFS=/var/lib/lxc/$LXC_NAME/rootfs
+- '[ "x${LXC_DISTRO}" == "xdebian" ] && sudo LANG= LC_ALL= LC_CTYPE= lxc-create -n
+  $LXC_NAME -t debian -- -r $LXC_RELEASE --mirror http://mirrors.us.kernel.org/debian
+  --packages python || true'
+- '[ "x${LXC_DISTRO}" == "xcentos" ] && sudo root_expire_password=no lxc-create -n
+  $LXC_NAME -t centos -- -R $LXC_RELEASE || true'
+- '[ "x${LXC_DISTRO}" == "xubuntu" ] && sudo lxc-create -n $LXC_NAME -t ubuntu --
+  -r $LXC_RELEASE --mirror http://mirrors.us.kernel.org/ubuntu --packages python,ca-certificates,curl
+  || true'
+- sudo lxc-start -n $LXC_NAME && until (sudo lxc-info -n $LXC_NAME | grep -q ^IP:);
+  do printf . && sleep 1; done && sleep 2
+- '[ "x${LXC_DISTRO}" == "xcentos" ] && sudo lxc-attach -n $LXC_NAME -- yum install
+  -y epel-release || true'
+- sudo /bin/bash -c "printf '\n$(sudo lxc-info -Hin $LXC_NAME) test.lxc' >> /etc/hosts"
+- ssh-keygen -f ~/.ssh/id_rsa -t rsa -N ''
+- sudo mkdir -vm 0700 $LXC_ROOTFS/root/.ssh/
+- sudo cp -v ~/.ssh/id_rsa.pub $LXC_ROOTFS/root/.ssh/authorized_keys
+script:
+- ansible-playbook tests/test.yml -i tests/inventory --syntax-check
+- ansible-playbook tests/test.yml -i tests/inventory
+- unbuffer ansible-playbook tests/test.yml -i tests/inventory >/tmp/idempotency.log
+  2>&1
+- 'tail /tmp/idempotency.log | grep -qP ''changed=0.*failed=0'' && (echo "Idempotence:
+  PASS"; exit 0) || (echo "Idempotence: FAIL"; cat /tmp/idempotency.log; exit 1)'
+notifications:
+  webhooks: https://galaxy.ansible.com/api/v1/notifications/
+  slack:
+    secure: hoEDQnPRXVX1hOUJv/JfoU9FO+115FxCm5uy8WTbP9CWhfvr/n0QLSMXSKPjGQzbHLPCPJDYMK/FvO2MdRw3YW+n9iw7KCv56lHS0dRbQug5kWMCMKM74o+0CH72LIlfQHChcA2v32IiolHOEYUM+D+qxz+a3KXUDUaG+PMTz2DDRzWCzkjF9pwfmK7C0O4o9yyqMFl+GOQ/z2ug6VBDtWIFPnhV+Xf7SkoELzZ7K7SzpeNof5O0Zopuc0MCIZZktl2fS60cqHyUgoMIR17OfyO2gDhav4ghprxOa7wRIv+6Xala0618IXXw/0QWjLW1vdAPSp4z7OFKIEKe8E86g97aOzlkpUC8MvbrgSY/y5xDEfGgAc3NWHpT86a45kd5qLBzqFKgznLZPAScWUF1hFlppH5uXsytXqAf6szhfXdvpm4C8LvjygXi6xPbTrbmoUaQUOx+ZI+5FQ4u3bbHQUiqQ7FK0r4ZDrtI/amsR3qCKimR4qZVI+x2JM4TrsWgSjcItSdY/Bsaa8a1O6eu+GpdNSfR1N6adrljKdmMHfq/lFjDwina+iz14iTyye0G4Pm7mzDqj+9J5O77Ws1a/8i0RwS2X7JzL9+88KJWIgvi6joHzZOkJGt8tbC8v+NeEC8GOBGTo17hQ4NQHTlZAtDYeA0FMYGSyKX3tSPi5dA=

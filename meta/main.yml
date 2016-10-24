@@ -1,0 +1,17 @@
+---
+galaxy_info:
+  author: Musee Ullah
+  description: Datastax Enterprise installation and configuration
+  company: FireEye, Inc.
+  license: MIT
+  min_ansible_version: 2.1
+  platforms:
+    - name: Debian
+      versions:
+      - wheezy
+      - jessie
+  galaxy_tags:
+    - cassandra
+    - datastax
+dependencies:
+  - lae.dse_repo

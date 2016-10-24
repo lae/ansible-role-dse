@@ -1,0 +1,19 @@
+---
+- name: Install datastax-agent
+  apt:
+    name: datastax-agent
+    state: latest
+  notify:
+    - start datastax-agent
+
+- name: Install Cassandra and required DSE packages
+  apt:
+    name: "{{ item }}"
+    state: latest
+  with_items:
+    - "dse={{ dse_version }}"
+    - "dse-libcassandra={{ dse_version }}"
+    - "dse-libhadoop={{ dse_version }}"
+    - "dse-libhadoop-native={{ dse_version }}"
+
+# vim:ft=ansible:

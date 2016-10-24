@@ -1,0 +1,6 @@
+---
+# tasks file for ansible-role-dse
+- include: install_packages.yml
+
+
+# vim:ft=ansible:
