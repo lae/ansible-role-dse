@@ -1,19 +1,43 @@
 ---
 - name: Install datastax-agent
-  apt:
+  package:
     name: datastax-agent
     state: latest
   notify:
     - start datastax-agent
 
-- name: Install Cassandra and required DSE packages
+- block:
+  - name: Upload python-support dummy package (Ubuntu 16, DSE<5.0)
+    copy:
+      src: python-support_1.0.15_all.deb
+      dest: /var/cache/apt/archives/python-support_1.0.15_all.deb
+
+  - name: Install python-support dummy package (Ubuntu 16, DSE<5.0)
+    apt:
+      deb: /var/cache/apt/archives/python-support_1.0.15_all.deb
+      state: installed
+
+  when: ansible_distribution == "Ubuntu" and ansible_distribution_major_version == "16"
+
+- name: Install Cassandra and required DSE packages (apt)
   apt:
-    name: "{{ item }}"
-    state: latest
+    name: "{{ item }}={{ dse_version }}"
+    state: installed
   with_items:
-    - "dse={{ dse_version }}"
-    - "dse-libcassandra={{ dse_version }}"
-    - "dse-libhadoop={{ dse_version }}"
-    - "dse-libhadoop-native={{ dse_version }}"
+    - "dse"
+    - "dse-libcassandra"
+    - "dse-libhadoop"
+    - "dse-libhadoop-native"
+  when: ansible_pkg_mgr == "apt"
+
+- name: Install Cassandra and required DSE packages (yum)
+  yum:
+    name: "{{ item }}-{{ dse_version }}"
+    state: installed
+  with_items:
+    - "dse-libcassandra"
+    - "dse-libhadoop"
+    - "dse-libhadoop-native"
+  when: ansible_pkg_mgr == "yum"
 
 # vim:ft=ansible:

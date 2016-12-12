@@ -1,63 +1,32 @@
 language: python
-python: '2.7'
 sudo: required
 dist: trusty
-addons:
-  apt:
-    sources:
-    - sourceline: ppa:ubuntu-lxc/stable
-    packages:
-    - python-pip
-    - lxc
-    - lxc-templates
-    - yum
-    - expect-dev
 cache:
-  directories:
-  - "$HOME/lxc/"
+  directories: [ '$HOME/lxc' ]
   pip: true
-before_cache:
-- mkdir $HOME/lxc
-- sudo tar cf $HOME/lxc/cache.tar /var/cache/lxc/
-- sudo chown $USER. $HOME/lxc/cache.tar
 env:
   matrix:
-  - LXC_NAME=test-debian8 LXC_DISTRO=debian LXC_RELEASE=jessie
-  - LXC_NAME=test-debian7 LXC_DISTRO=debian LXC_RELEASE=wheezy
+  - LXC_DISTRO=debian LXC_RELEASE=jessie
+  - LXC_DISTRO=ubuntu LXC_RELEASE=xenial
+  - LXC_DISTRO=centos LXC_RELEASE=7
   global:
-    secure: 0NU63++MOwxExYKOLoAmSYZ+5rhtrtJFxAhHhgG0XD8ldUH4Dr5hl+D9SicCIfJKav+Uvv+nIdtDN0aK9RJ3P6CZyup9unnwpU5wZYQxrOAw77tXQn1FnuwY08MbNX5xJKAiZqNNevRpml7QcX20ny6SWhm+piqBeXMWRCvLhekDhdtvioceH7qZ3ZrDFiwDFuGQamC3Nk5Y99OsFouyZJJnXWEVAxxKJ25JNFA16o2UmZb6N0Bh3D2HJixsP4hTZQkZkVyvMOxXbuvXiOLyywgLX5ysSMJCsIj+t6OMXFrDG3/mx0rgeStLaV4RrojLF0NZsLw5+zKS2f4YdmwL2NrwWx4STN3M81iUpYZgWINVkFw/QQQN1+wiFEzcd7GI1aXo9MDWkStZJJj5uWOa5L9+nugjOen7WZkK1QWRrgis7vBXKrE0DPwdC5Q73n+rN+CX2V9XQ7o4yxwMtminINzOwgL8u2IcbEPL3E2v/PZLsNFuIV3psNlFmHvWmT37cn2NShcJZQ60H4qEh1YLL8k91NW0AassWZ6JAYDktYduUtrH0o2cNPIkdZ53JHsurTRWeq98BX2MjhvUEeoMC/ERgYOvRCUrybEsdvLjYfM/VedD8f7BE/W3aXoLi4fus1Nyy2HtRQKjcb7vNSMU/dHruW9CweB79Ua0SVGgXHU=
+  - secure: xGVCBlqG1arf1bztyhFR7v3fqGrRHrZYaFPzSVhVu53F+9cNdxnqoiWurNvui7g44GwTZWVgCTiENLuuHMLcObgFLgYuwj1FlOljgpJ2BTL7/HUH8ACiujkXSm/SbniX5dZMVy2ZIJF8+/956MkaxQ1fypgMa7c3/x7BTe2oFuI9ebgP88tbVpU4lToK+mlTGSJ7LQ89afdoj7LditwJbmTNBevbVagYij5R11CoP9JSLo+G2L4G2rwCIWCIH4Ea3D4iLdcHxxjX/Xvzjs7iOa7gy+1icwQYiFw9BsRM/TD17BLM35d+uCT+02XXyNoOH7+RwoBx1XfMq5I9huec6v+pmAYpHB4QBQvSnmmM00MQ68HgRxxEOtepcm68pzG0M4ZWFV1IY8L3JL6F9F7qOGYbnjKGMlNuLalIglPkFUJneyVGPKJ8mZ/wtvUGZlZ79lwshsvGfwNv3sE2soh01Wiupckx0bLRExz50WUHmHUeMoumRQ1GD7KTXl3qOe7rA7MEb52SB4Npo/NmCsXRKDhWyB1+QwoN94SkgiaLGxDHJsZ6fdsm+G4D8Kz3JASR8VDujXW0XOiT48N1HPVlvmKCRSMGf4fn4Z85e1XOoQUz8vG+4O9RpygUZ4iEZcXntBvIWcJ4xXeT2oy2jNfEIbvL7l32FLqYcqcsi1IrPeo=
+before_cache:
+  - sudo mkdir $HOME/lxc && sudo tar cf $HOME/lxc/cache.tar /var/cache/lxc/ && sudo chown $USER. $HOME/lxc/cache.tar
 install:
+- sudo tar xf $HOME/lxc/cache.tar -C / || true
+- sudo apt-get install -y expect-dev
 - pip install ansible
 - ansible --version
-- ansible-galaxy install williamyeh.oracle-java
-- ansible-galaxy install lae.dse_repo
-- printf "$VAULT_PASS" > .vault_password
-- printf '[defaults]\nroles_path=../\nhost_key_checking=False\nvault_password_file=.vault_password\ncallback_whitelist=profile_tasks'
-  >ansible.cfg
-- sudo tar xf $HOME/lxc/cache.tar -C / || echo "Didn't extract cache."
-- export LXC_ROOTFS=/var/lib/lxc/$LXC_NAME/rootfs
-- '[ "x${LXC_DISTRO}" == "xdebian" ] && sudo LANG= LC_ALL= LC_CTYPE= lxc-create -n
-  $LXC_NAME -t debian -- -r $LXC_RELEASE --mirror http://mirrors.us.kernel.org/debian
-  --packages python || true'
-- '[ "x${LXC_DISTRO}" == "xcentos" ] && sudo root_expire_password=no lxc-create -n
-  $LXC_NAME -t centos -- -R $LXC_RELEASE || true'
-- '[ "x${LXC_DISTRO}" == "xubuntu" ] && sudo lxc-create -n $LXC_NAME -t ubuntu --
-  -r $LXC_RELEASE --mirror http://mirrors.us.kernel.org/ubuntu --packages python,ca-certificates,curl
-  || true'
-- sudo lxc-start -n $LXC_NAME && until (sudo lxc-info -n $LXC_NAME | grep -q ^IP:);
-  do printf . && sleep 1; done && sleep 2
-- '[ "x${LXC_DISTRO}" == "xcentos" ] && sudo lxc-attach -n $LXC_NAME -- yum install
-  -y epel-release || true'
-- sudo /bin/bash -c "printf '\n$(sudo lxc-info -Hin $LXC_NAME) test.lxc' >> /etc/hosts"
-- ssh-keygen -f ~/.ssh/id_rsa -t rsa -N ''
-- sudo mkdir -vm 0700 $LXC_ROOTFS/root/.ssh/
-- sudo cp -v ~/.ssh/id_rsa.pub $LXC_ROOTFS/root/.ssh/authorized_keys
+- printf "$VAULT_PASSWORD" > .vault_password
+- printf '[defaults]\nroles_path=../\nvault_password_file=.vault_password\ncallback_whitelist=profile_tasks'  >ansible.cfg
+- ansible-galaxy install lae.travis-lxc williamyeh.oracle-java lae.dse_repo
+- ansible-playbook -vvv tests/install.yml
 script:
 - ansible-playbook tests/test.yml -i tests/inventory --syntax-check
 - ansible-playbook tests/test.yml -i tests/inventory
-- unbuffer ansible-playbook tests/test.yml -i tests/inventory >/tmp/idempotency.log
-  2>&1
-- 'tail /tmp/idempotency.log | grep -qP ''changed=0.*failed=0'' && (echo "Idempotence:
+- unbuffer ansible-playbook -vvv tests/test.yml -i tests/inventory >/tmp/idempotency.log 2>&1
+- 'grep -A1 "PLAY RECAP" /tmp/idempotency.log | grep -qP "changed=0.*failed=0" && (echo "Idempotence:
   PASS"; exit 0) || (echo "Idempotence: FAIL"; cat /tmp/idempotency.log; exit 1)'
 notifications:
   webhooks: https://galaxy.ansible.com/api/v1/notifications/
