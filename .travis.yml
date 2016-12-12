@@ -28,6 +28,8 @@ script:
 - unbuffer ansible-playbook -vvv tests/test.yml -i tests/inventory >/tmp/idempotency.log 2>&1
 - 'grep -A1 "PLAY RECAP" /tmp/idempotency.log | grep -qP "changed=0.*failed=0" && (echo "Idempotence:
   PASS"; exit 0) || (echo "Idempotence: FAIL"; cat /tmp/idempotency.log; exit 1)'
+- ansible -m shell -a "PAGER=cat journalctl -xu dse" -i tests/inventory all
+- ansible -m shell -a "nodetool status" -i tests/inventory all
 notifications:
   webhooks: https://galaxy.ansible.com/api/v1/notifications/
   slack:

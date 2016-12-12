@@ -1,3 +1,25 @@
 ---
 # defaults file for ansible-role-dse
 dse_version: 4.6.*
+dse_drive_count: 2
+
+dse_dc: DC1
+dse_rack: RAC1
+# dse_cassandra_cluster_name: cluster01
+dse_cassandra_num_tokens: 256
+dse_cassandra_authenticator: AllowAllAuthenticator
+dse_cassandra_authorizer: AllowAllAuthorizer
+dse_cassandra_data_file_directories:
+  - /var/lib/cassandra/data
+dse_cassandra_commitlog_directory: /var/lib/cassandra/commitlog
+dse_cassandra_saved_caches_directory: /var/lib/cassandra/saved_caches
+dse_cassandra_seeds:
+  - 127.0.0.1
+dse_cassandra_concurrent_reads: "{{ dse_drive_count | int * 16 }}"
+dse_cassandra_concurrent_writes: "{{ ansible_processor_vcpus * 8 }}"
+dse_cassandra_trickle_fsync: false # set to true on SSDs
+# set the following two to empty strings to use hostname resolution
+dse_cassandra_listen_address: "{{ ansible_default_ipv4.address }}"
+dse_cassandra_rpc_address: "{{ ansible_default_ipv4.address }}"
+dse_cassandra_compaction_throughput_mb_per_sec: 16 # set to 0 on SSDs/ or higher number on high write throughput
+dse_cassandra_auto_bootstrap: false # set to true on first run for a new cluster

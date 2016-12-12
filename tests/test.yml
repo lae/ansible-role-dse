@@ -1,8 +1,19 @@
 ---
 - hosts: all
   become: True
+  vars:
+    dse_cassandra_cluster_name: cluster01
+    dse_cassandra_seeds: "{{ groups['cluster01_seeds'] | join(',') }}"
+    dse_cassandra_auto_bootstrap: true
   roles:
     - lae.dse_repo
     - ansible-role-dse
+  tasks:
+    - name: Start DSE
+      service:
+        name: dse 
+        state: started
+    - pause:
+        seconds: 10
 
 # vim:ft=ansible:

@@ -2,5 +2,59 @@
 # tasks file for ansible-role-dse
 - include: install_packages.yml
 
+- name: Copy DSE service configuration
+  template:
+    src: etc-default-dse.j2
+    dest: /etc/default/dse
+    owner: cassandra
+    group: cassandra
+    mode: 0644
+    backup: yes
+
+- name: Copy Cassandra configuration file
+  template:
+    src: cassandra.yaml-4.6.j2
+    dest: /etc/dse/cassandra/cassandra.yaml
+    owner: cassandra
+    group: cassandra
+    mode: 0644
+    backup: yes
+
+- name: Create data directories for Cassandra
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: cassandra
+    group: cassandra
+    mode: 0750
+  with_items: "{{ dse_cassandra_data_file_directories }}"
+
+- name: Create other directories for Cassandra
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: cassandra
+    group: cassandra
+    mode: 0750
+  with_items:
+    - "{{ dse_cassandra_commitlog_directory }}"
+    - "{{ dse_cassandra_saved_caches_directory }}"
+
+- name: Configure properties for GossipingPropertyFileSnitch
+  template:
+    src: cassandra-rackdc.properties.j2
+    dest: /etc/dse/cassandra/cassandra-rackdc.properties
+    owner: cassandra
+    group: cassandra
+    mode: 0644
+    backup: yes
+
+- name: Copy environment settings
+  template:
+    src: cassandra-env.sh-4.6.j2
+    dest: /etc/dse/cassandra/cassandra-env.sh
+    owner: cassandra
+    group: cassandra
+    mode: 0644
 
 # vim:ft=ansible:

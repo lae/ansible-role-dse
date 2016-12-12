@@ -1,0 +1,91 @@
+# {{ ansible_managed }}
+cluster_name: '{{ dse_cassandra_cluster_name }}'
+num_tokens: {{ dse_cassandra_num_tokens }}
+# initial_token: # replace with num_tokens logic
+hinted_handoff_enabled: true
+max_hint_window_in_ms: 10800000
+hinted_handoff_throttle_in_kb: 1024
+max_hints_delivery_threads: 2
+batchlog_replay_throttle_in_kb: 1024
+authenticator: {{ dse_cassandra_authenticator }}
+authorizer: {{ dse_cassandra_authorizer }}
+permissions_validity_in_ms: 3600000 # Default is 2000 (2 seconds)
+partitioner: org.apache.cassandra.dht.Murmur3Partitioner
+data_file_directories:
+{% for __directory in dse_cassandra_data_file_directories %}
+    - {{ __directory }}
+{% endfor %}
+commitlog_directory: {{ dse_cassandra_commitlog_directory }}
+disk_failure_policy: stop
+commit_failure_policy: stop
+key_cache_size_in_mb:
+key_cache_save_period: 14400
+row_cache_size_in_mb: 0
+row_cache_save_period: 0
+saved_caches_directory: {{ dse_cassandra_saved_caches_directory }}
+commitlog_sync: periodic
+commitlog_sync_period_in_ms: 10000
+commitlog_segment_size_in_mb: 32
+seed_provider:
+    - class_name: org.apache.cassandra.locator.SimpleSeedProvider
+      parameters:
+          - seeds: "{{ dse_cassandra_seeds | default(['127.0.0.1']) | join(',') }}"
+concurrent_reads: {{ dse_cassandra_concurrent_reads }}
+concurrent_writes: {{ dse_cassandra_concurrent_writes }}
+memtable_flush_queue_size: 4
+trickle_fsync: {{ dse_cassandra_trickle_fsync }}
+trickle_fsync_interval_in_kb: 10240
+storage_port: 7000
+ssl_storage_port: 7001
+listen_address: {{ dse_cassandra_listen_address }} # Default is localhost
+start_native_transport: true
+native_transport_port: 9042
+native_transport_max_threads: 256 # Default is 128
+start_rpc: true
+rpc_address: {{ dse_cassandra_rpc_address }} # Default is localhost
+rpc_port: 9160
+rpc_keepalive: true
+rpc_server_type: sync
+thrift_framed_transport_size_in_mb: 15
+incremental_backups: false
+snapshot_before_compaction: false
+auto_snapshot: true
+tombstone_warn_threshold: 1000
+tombstone_failure_threshold: 100000
+column_index_size_in_kb: 64
+batch_size_warn_threshold_in_kb: 64
+in_memory_compaction_limit_in_mb: 64
+concurrent_compactors: 2
+multithreaded_compaction: false
+compaction_throughput_mb_per_sec: {{ dse_cassandra_compaction_throughput_mb_per_sec }}
+compaction_preheat_key_cache: true
+stream_throughput_outbound_megabits_per_sec: 200
+inter_dc_stream_throughput_outbound_megabits_per_sec: 200
+read_request_timeout_in_ms: 5000
+range_request_timeout_in_ms: 10000
+write_request_timeout_in_ms: 2000
+cas_contention_timeout_in_ms: 1000
+truncate_request_timeout_in_ms: 60000
+request_timeout_in_ms: 10000
+cross_node_timeout: false
+endpoint_snitch: GossipingPropertyFileSnitch # Default is com.datastax.bdp.snitch.DseSimpleSnitch
+dynamic_snitch_update_interval_in_ms: 100
+dynamic_snitch_reset_interval_in_ms: 600000
+dynamic_snitch_badness_threshold: 0.1
+request_scheduler: org.apache.cassandra.scheduler.NoScheduler
+server_encryption_options:
+    internode_encryption: none
+    keystore: resources/dse/conf/.keystore
+    keystore_password: cassandra
+    truststore: resources/dse/conf/.truststore
+    truststore_password: cassandra
+client_encryption_options:
+    enabled: false
+    keystore: resources/dse/conf/.keystore
+    keystore_password: cassandra
+internode_compression: dc
+inter_dc_tcp_nodelay: false
+preheat_kernel_page_cache: false
+auto_bootstrap: {{ dse_cassandra_auto_bootstrap }}
+
+# vim:ft=yaml:
